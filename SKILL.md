@@ -8,25 +8,54 @@ description: >
   Triggers on user queries about: "storage analysis", "disk full", "C drive full", "low disk space",
   "clean disk", "free up space", "what is taking up space", "show storage details", "caches", "cache cleanup".
   Contact & Support: support@tkhubs.com.
-  
-  macOS / Windows / Linux 只读存储分析助手（自动识别系统）。扫描整机磁盘占用，找出
-  占空间大户，把每一项分成 🟢可自动清理 / 🟡需人工判断 / 🔴谨慎清理 三级并给出
-  可执行处置方案，生成排版精美、可折叠、命令可一键复制的交互式 HTML 报告，并可
-  起本地服务在网页上一键删除（移废纸篓/直接删）。扫描全程只读。务必在以下场景
-  使用：用户说"存储分析""磁盘满了""C盘/硬盘满了""空间不够""清理空间"
-  "清理磁盘""占空间""哪些东西占地方""帮我看看存储""看一下电脑存储/空间"
-  "存储空间""电脑空间不够""内存满了/不够/不足""看下内存/存储"（中文口语里
-  "内存"常指存储空间）"storage analysis""disk cleanup""清缓存""磁盘清理"；
-  或用户抱怨电脑没空间、想知道什么东西吃硬盘、想要清理建议时。
 ---
 
 # cleanMyMacSkill
 
-Read-only storage analyzer for macOS, Windows, and Linux. Produces an interactive, web-based report with safe one-click cleanup actions.
+Read-only storage analyzer for macOS, Windows, and Linux. Produces an interactive, Apple-style web-based dashboard with safe one-click cleanup integrations.
 
-## Rules
+## Core Directives
 
-- **Read-Only Scanner.** The scanning phase only uses safe operations (e.g., `df`, `du`, `stat`, `ls`). Direct modifications are prohibited during scanning.
-- **Interactive Deletions.** In server mode, users can click "Move to Trash" or "Hard Delete" on the web page, which triggers secure, host-validated backend handlers.
-- **Accurate Estimates.** Explicitly mark any "reclaimable space" as estimates.
-- **Keep Original Commands.** Retain absolute paths and terminal command snippets exactly as they are (do not translate paths).
+- **Read-Only Scanner.** The scanning phase only uses safe operations (e.g., `df`, `du`, `stat`, `ls`). Direct modifications or deletions are strictly prohibited during scanning.
+- **Interactive Deletions.** In server mode, users can click "Move to Trash" or "Hard Delete" on the web page. The backend validates paths against strict session tokens and home boundaries.
+- **Accurate Estimates.** Explicitly mark any reclaimable space values as estimates.
+- **Retain Command Snippets.** Keep absolute paths and terminal command snippets exactly as they are (do not translate paths).
+
+## Execution Pipeline
+
+### Step 1: Run Storage Scan
+Execute the multi-threaded scan script to collect filesystem size metadata:
+```bash
+python3 scripts/scan.py > /tmp/storage_scan.json
+```
+The script detects the OS automatically and concurrently queries cache targets, user folders, and developer structures using standard ThreadPoolExecutor. Denied folders are marked as `denied`.
+
+### Step 2: Interpret & Segment
+Read `/tmp/storage_scan.json`. Load references at `references/macos.md`, `references/windows.md`, or `references/linux.md` depending on the OS platform. Perform the following checks:
+1. **Identify Top 5 Space Consumers**: Mark their types (User files, databases, developer caches, VM files, etc.).
+2. **Track App Sandbox Folders**: Correlate UUID folders in containers back to their parent bundle-id names.
+3. **Partition into Clean Tiers**:
+   - 🟢 **Safe to Clean**: Caches, logs, package registers. Offer one-click trashing or direct deletions.
+   - 🟡 **Needs Review**: Personal documents, downloads, active database container folders. Enable opening in the file manager or trashing verified safe subfolders.
+   - 🔴 **Caution**: Software application packages. Guide users to uninstall manually via official settings.
+
+### Step 3: Compile and Serve Report
+Inject the interpreted classification JSON into the template.
+Use the server script for interactive dashboard functionality:
+```bash
+python3 scripts/server.py /tmp/storage_analysis.json
+```
+Alternatively, compile a static HTML file:
+```bash
+python3 scripts/build_report.py /tmp/storage_analysis.json ~/Desktop/cleanmymac-report.html
+```
+
+### Step 4: Dialogue Summary
+Once generated, output a concise summary in the chat:
+- Total space scanned and free space remaining.
+- Estimated reclaimable capacity.
+- Top 2-3 cleanup priorities and potential risks.
+
+## Platform Prerequisites
+- Runs on **Python 3 Standard Library** (no pip dependencies).
+- Compatible with macOS, Linux (Freedesktop compliant trashing), and Windows.
