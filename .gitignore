@@ -21,6 +21,7 @@ AGENTS.md
 /tmp/
 *.json
 *.html
+!assets/report_template.html
 *.log
 __pycache__/
 *.pyc
