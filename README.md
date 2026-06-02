@@ -1,6 +1,7 @@
 # cleanMyMacSkill
 
 A lightweight, high-performance, read-only storage analyzer and cleaning assistant for macOS, Windows, and Linux.
+<img width="1195" height="908" alt="image" src="https://github.com/user-attachments/assets/96bde4ba-39e5-4a31-af7e-0531eb5605ce" />
 
 ---
 
